@@ -1,0 +1,6 @@
+{
+  "name": "Smart Laundry IoT - Sistem Manajemen Kasir & Timbangan Digital",
+  "description": "Sistem manajemen laundry cerdas berbasis IoT dengan integrasi timbangan ESP32 + Loadcell HX711, deteksi berat otomatis, dan notifikasi WhatsApp via Fonnte.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
