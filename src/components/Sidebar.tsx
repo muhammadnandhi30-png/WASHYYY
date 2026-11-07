@@ -114,9 +114,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-white border-r border-slate-200 flex flex-col justify-between transition-transform duration-200 ease-in-out lg:translate-x-0 ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:sticky lg:top-0 lg:h-screen lg:shrink-0`}
+        className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-white border-r border-slate-200 flex flex-col justify-between transition-transform duration-200 ease-in-out lg:translate-x-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+          } lg:sticky lg:top-0 lg:h-screen lg:shrink-0`}
       >
         <div className="flex flex-col flex-1 overflow-y-auto p-4 space-y-4">
           {/* Logo & Brand Header */}
@@ -147,9 +146,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center space-x-1.5">
                 <span
-                  className={`h-2 w-2 rounded-full ${
-                    scaleStatus.online ? 'bg-emerald-500' : 'bg-amber-500'
-                  }`}
+                  className={`h-2 w-2 rounded-full ${scaleStatus.online ? 'bg-emerald-500' : 'bg-amber-500'
+                    }`}
                 />
                 <span className="text-[11px] font-medium text-slate-600">
                   {scaleStatus.online ? 'ESP32 Online' : 'ESP32 Offline'}
@@ -186,11 +184,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   key={item.id}
                   onClick={item.action}
-                  className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors ${
-                    isActive
+                  className={`w-full min-h-[44px] flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-colors ${isActive
                       ? 'bg-sky-600 text-white font-semibold shadow-xs'
                       : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center space-x-2.5">
                     <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-500'}`} />
@@ -199,11 +196,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                   {item.badge && (
                     <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded-md border font-semibold ${
-                        isActive
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-md border font-semibold ${isActive
                           ? 'bg-white/20 text-white border-white/30'
                           : item.badgeStyle
-                      }`}
+                        }`}
                     >
                       {item.badge}
                     </span>
@@ -232,11 +228,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span>Database:</span>
             </span>
             <span
-              className={`font-semibold px-1.5 py-0.2 rounded border ${
-                isUsingSupabase
+              className={`font-semibold px-1.5 py-0.2 rounded border ${isUsingSupabase
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                   : 'bg-amber-50 text-amber-800 border-amber-200'
-              }`}
+                }`}
             >
               {isUsingSupabase ? 'Supabase' : 'In-Memory'}
             </span>
