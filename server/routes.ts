@@ -41,37 +41,32 @@ export function createApiRouter(io: SocketIOServer) {
   // POST /api/orders - Buat order manual
   router.post('/orders', async (req, res) => {
     try {
-      const { berat, nama_pelanggan, nomor_wa, opsi_pengambilan, alamat, kategori_layanan, harga_per_kg } = req.body;
+      const { berat, nama_pelanggan, nomor_wa, opsi_pengambilan, alamat, kategori_layanan, harga_per_kg, is_draft } = req.body;
       const parsedWeight = parseFloat(berat);
       if (isNaN(parsedWeight) || parsedWeight <= 0) {
         return res.status(400).json({ success: false, error: 'Berat harus berupa angka positif' });
       }
 
-      const kategori = kategori_layanan || 'Pakaian';
-      const order = await db.createDraftOrder(parsedWeight, kategori);
-      const updates: any = {
-        nama_pelanggan: nama_pelanggan || 'Pelanggan Baru',
-        nomor_wa: nomor_wa || '',
-        opsi_pengambilan: opsi_pengambilan || 'Self Pick-up',
-        alamat: alamat || '',
-        kategori_layanan: kategori,
-        is_draft: false,
-      };
-      if (harga_per_kg !== undefined && !isNaN(parseFloat(harga_per_kg))) {
-        updates.harga_per_kg = parseFloat(harga_per_kg);
-      }
-
-      const updated = await db.updateOrder(order.id, updates);
+      const order = await db.createOrder({
+        berat: parsedWeight,
+        nama_pelanggan,
+        nomor_wa,
+        opsi_pengambilan,
+        alamat,
+        kategori_layanan,
+        harga_per_kg: harga_per_kg !== undefined && !isNaN(parseFloat(harga_per_kg)) ? parseFloat(harga_per_kg) : undefined,
+        is_draft: is_draft ?? false,
+      });
 
       // Emit event socket
-      io.emit('order:created', updated);
+      io.emit('order:created', order);
 
-      // Kirim WA konfirmasi jika ada nomor WA
-      if (updated && updated.nomor_wa) {
-        fonnteService.sendOrderConfirmation(updated).catch(console.error);
+      // Kirim WA konfirmasi jika bukan draft dan ada nomor WA (background non-blocking)
+      if (order.is_draft === false && order.nomor_wa && order.nomor_wa.trim().length >= 8) {
+        fonnteService.sendOrderConfirmation(order).catch(console.error);
       }
 
-      res.status(201).json({ success: true, data: updated });
+      res.status(201).json({ success: true, data: order });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message });
     }

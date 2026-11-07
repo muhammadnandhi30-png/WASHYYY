@@ -31,6 +31,7 @@ export const api = {
     alamat?: string;
     kategori_layanan?: KategoriLayanan;
     harga_per_kg?: number;
+    is_draft?: boolean;
   }): Promise<Order> {
     const res = await fetch(`${API_BASE}/orders`, {
       method: 'POST',

@@ -8,7 +8,6 @@ import {
   WashingMachine,
   LayoutDashboard,
   ClipboardList,
-  Cpu,
   MessageSquare,
   Settings as SettingsIcon,
   FileCode2,
@@ -25,7 +24,6 @@ interface SidebarProps {
   scaleStatus: ScaleStatus;
   ordersCount: number;
   onTare: () => void;
-  onOpenSimulator: () => void;
   onOpenLogs: () => void;
   onOpenSettings: () => void;
   onOpenDocs: () => void;
@@ -42,7 +40,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   scaleStatus,
   ordersCount,
   onTare,
-  onOpenSimulator,
   onOpenLogs,
   onOpenSettings,
   onOpenDocs,
@@ -73,15 +70,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       badgeStyle: 'bg-slate-100 text-slate-700 border-slate-200',
       action: () => {
         setActiveNav('orders');
-        onCloseMobile();
-      },
-    },
-    {
-      id: 'simulator',
-      label: 'Simulator IoT',
-      icon: Cpu,
-      action: () => {
-        onOpenSimulator();
         onCloseMobile();
       },
     },

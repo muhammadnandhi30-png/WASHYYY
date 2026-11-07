@@ -231,6 +231,82 @@ export const db = {
     return ordersStore.find((o) => o.id === id) || null;
   },
 
+  async createOrder(data: {
+    berat: number;
+    kategori_layanan?: 'Pakaian' | 'Sprey' | 'Karpet';
+    harga_per_kg?: number;
+    nama_pelanggan?: string;
+    nomor_wa?: string;
+    opsi_pengambilan?: 'Self Pick-up' | 'Delivery';
+    alamat?: string;
+    is_draft?: boolean;
+  }): Promise<Order> {
+    const kategori = data.kategori_layanan || 'Pakaian';
+    let hargaPerKg = data.harga_per_kg;
+    if (!hargaPerKg || isNaN(hargaPerKg)) {
+      hargaPerKg = kategori === 'Sprey' ? (settingsStore.harga_sprei || 12000)
+                 : kategori === 'Karpet' ? (settingsStore.harga_karpet || 15000)
+                 : (settingsStore.harga_pakaian || settingsStore.harga_per_kg || 6000);
+    }
+
+    const roundedBerat = Math.round(data.berat * 100) / 100;
+    const totalHarga = Math.round(roundedBerat * hargaPerKg);
+
+    const newOrder: Order = {
+      id: crypto.randomUUID(),
+      kode_invoice: generateInvoiceCode(),
+      nama_pelanggan: data.nama_pelanggan?.trim() || 'Pelanggan Baru',
+      nomor_wa: data.nomor_wa?.trim() || '',
+      berat: roundedBerat,
+      harga_per_kg: hargaPerKg,
+      total_harga: totalHarga,
+      status_cucian: 'Menunggu',
+      opsi_pengambilan: data.opsi_pengambilan || 'Self Pick-up',
+      alamat: data.alamat?.trim() || '',
+      status_pembayaran: 'Belum Bayar',
+      metode_pembayaran: null,
+      kategori_layanan: kategori,
+      is_draft: data.is_draft ?? false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    ordersStore.unshift(newOrder);
+
+    if (isUsingSupabase && supabase) {
+      try {
+        const payload: any = {
+          id: newOrder.id,
+          kode_invoice: newOrder.kode_invoice,
+          nama_pelanggan: newOrder.nama_pelanggan,
+          nomor_wa: newOrder.nomor_wa,
+          berat: newOrder.berat,
+          harga_per_kg: newOrder.harga_per_kg,
+          total_harga: newOrder.total_harga,
+          status_cucian: newOrder.status_cucian,
+          opsi_pengambilan: newOrder.opsi_pengambilan,
+          alamat: newOrder.alamat,
+          status_pembayaran: newOrder.status_pembayaran,
+          is_draft: newOrder.is_draft,
+        };
+
+        const { data: inserted, error } = await supabase
+          .from('orders')
+          .insert(payload)
+          .select()
+          .single();
+
+        if (!error && inserted) {
+          return { ...newOrder, ...inserted, kategori_layanan: kategori };
+        }
+      } catch (err) {
+        console.error('[DB] Gagal insert order ke Supabase:', err);
+      }
+    }
+
+    return newOrder;
+  },
+
   async createDraftOrder(berat: number, kategori: 'Pakaian' | 'Sprey' | 'Karpet' = 'Pakaian'): Promise<Order> {
     const settings = await this.getSettings();
     let hargaPerKg = settings.harga_pakaian || settings.harga_per_kg || 6000;
@@ -315,12 +391,33 @@ export const db = {
 
     if (isUsingSupabase && supabase) {
       try {
+        const payload: any = {};
+        const safeColumns = [
+          'nama_pelanggan',
+          'nomor_wa',
+          'berat',
+          'harga_per_kg',
+          'total_harga',
+          'status_cucian',
+          'opsi_pengambilan',
+          'alamat',
+          'status_pembayaran',
+          'metode_pembayaran',
+          'is_draft',
+        ];
+        for (const col of safeColumns) {
+          if ((updates as any)[col] !== undefined) {
+            payload[col] = (updates as any)[col];
+          }
+        }
+        if (updates.berat !== undefined || updates.harga_per_kg !== undefined) {
+          payload.total_harga = updated.total_harga;
+        }
+        payload.updated_at = updated.updated_at;
+
         await supabase
           .from('orders')
-          .update({
-            ...updates,
-            updated_at: updated.updated_at,
-          })
+          .update(payload)
           .eq('id', id);
       } catch (err) {
         console.error('[DB] Gagal update order di Supabase:', err);

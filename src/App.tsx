@@ -13,7 +13,6 @@ import { WeightDisplay } from './components/WeightDisplay.js';
 import { OrderList } from './components/OrderList.js';
 import { AutoOrderModal } from './components/AutoOrderModal.js';
 import { PaymentModal } from './components/PaymentModal.js';
-import { ScaleSimulator } from './components/ScaleSimulator.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import { NotificationLogsModal } from './components/NotificationLogsModal.js';
 import { DocsModal } from './components/DocsModal.js';
@@ -61,7 +60,6 @@ export default function App() {
   const [activeInvoiceOrder, setActiveInvoiceOrder] = useState<Order | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
 
-  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLogsOpen, setIsLogsOpen] = useState(false);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
@@ -145,7 +143,30 @@ export default function App() {
       setSettings(newSettings);
     });
 
+    // Sinkronisasi berkala (polling fallback) untuk serverless Vercel / multi-device
+    const pollInterval = setInterval(() => {
+      api.getOrders().then((latest) => {
+        setOrders((prev) => {
+          if (
+            latest.length !== prev.length ||
+            latest[0]?.id !== prev[0]?.id ||
+            latest[0]?.updated_at !== prev[0]?.updated_at
+          ) {
+            return latest;
+          }
+          return prev;
+        });
+      }).catch(() => {});
+    }, 5000);
+
+    const onFocus = () => {
+      api.getOrders().then(setOrders).catch(() => {});
+    };
+    window.addEventListener('focus', onFocus);
+
     return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('focus', onFocus);
       socket.off('weight:update');
       socket.off('scale:status');
       socket.off('order:created');
@@ -191,31 +212,97 @@ export default function App() {
     }
   };
 
-  // Handler: Input Order Manual
-  const handleManualOrder = async () => {
-    try {
-      const defaultWeight = scaleStatus.currentWeight > 0.1 ? scaleStatus.currentWeight : 2.5;
-      const order = await api.createOrder({
-        berat: defaultWeight,
-        kategori_layanan: (selectedService.name as any) || 'Pakaian',
-        harga_per_kg: selectedService.rate,
-      });
-      setActiveOrderModal(order);
-      setIsOrderModalOpen(true);
-    } catch (err: any) {
-      showToast('Gagal membuat order: ' + err.message);
-    }
+  // Handler: Input Order Manual - Membuka modal SECARA INSTAN (0ms delay)
+  const handleManualOrder = () => {
+    const defaultWeight = scaleStatus.currentWeight > 0.05 ? scaleStatus.currentWeight : 2.5;
+    const tempOrder: Order = {
+      id: 'new-' + Date.now(),
+      kode_invoice: 'Draft Baru',
+      nama_pelanggan: '',
+      nomor_wa: '',
+      berat: defaultWeight,
+      harga_per_kg: selectedService.rate,
+      total_harga: Math.round(defaultWeight * selectedService.rate),
+      status_cucian: 'Menunggu',
+      opsi_pengambilan: 'Self Pick-up',
+      alamat: '',
+      status_pembayaran: 'Belum Bayar',
+      metode_pembayaran: null,
+      kategori_layanan: (selectedService.name as any) || 'Pakaian',
+      is_draft: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    setActiveOrderModal(tempOrder);
+    setIsOrderModalOpen(true);
   };
 
-  // Handler: Simpan data pelanggan dari pop-up
+  // Handler: Simpan data pelanggan dari pop-up (Optimistic Update: langsung tampil di tabel tanpa refresh)
   const handleSaveOrderDraft = async (orderId: string, data: Partial<Order>) => {
-    const updated = await api.updateOrder(orderId, data);
-    setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
-    showToast(
-      data.is_draft === false
-        ? `Order ${updated.kode_invoice} berhasil disimpan dan pesan WhatsApp terkirim.`
-        : `Order ${updated.kode_invoice} disimpan sebagai draft.`
-    );
+    const isNew = orderId.startsWith('new-');
+
+    // 1. Optimistic Update instan ke state lokal
+    const optimisticOrder: Order = {
+      id: orderId,
+      kode_invoice: isNew ? 'Menyimpan...' : (activeOrderModal?.kode_invoice || 'LDR-REF'),
+      nama_pelanggan: data.nama_pelanggan || 'Pelanggan',
+      nomor_wa: data.nomor_wa || '',
+      berat: data.berat || 1.0,
+      harga_per_kg: data.harga_per_kg || 6000,
+      total_harga: Math.round((data.berat || 1.0) * (data.harga_per_kg || 6000)),
+      status_cucian: 'Menunggu',
+      opsi_pengambilan: data.opsi_pengambilan || 'Self Pick-up',
+      alamat: data.alamat || '',
+      status_pembayaran: 'Belum Bayar',
+      metode_pembayaran: null,
+      kategori_layanan: data.kategori_layanan || 'Pakaian',
+      is_draft: data.is_draft ?? false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    setOrders((prev) => {
+      const exists = prev.some((o) => o.id === orderId);
+      if (exists) {
+        return prev.map((o) => (o.id === orderId ? { ...o, ...data } : o));
+      }
+      return [optimisticOrder, ...prev];
+    });
+
+    try {
+      let savedOrder: Order;
+      if (isNew) {
+        // Panggil endpoint createOrder (1x round trip langsung jadi)
+        savedOrder = await api.createOrder({
+          berat: data.berat || 1.0,
+          nama_pelanggan: data.nama_pelanggan,
+          nomor_wa: data.nomor_wa,
+          opsi_pengambilan: data.opsi_pengambilan,
+          alamat: data.alamat,
+          kategori_layanan: data.kategori_layanan,
+          harga_per_kg: data.harga_per_kg,
+          is_draft: data.is_draft,
+        });
+      } else {
+        savedOrder = await api.updateOrder(orderId, data);
+      }
+
+      // 2. Perbarui dengan data resmi dari database
+      setOrders((prev) => {
+        const withoutTemp = prev.filter((o) => o.id !== orderId && o.id !== savedOrder.id);
+        return [savedOrder, ...withoutTemp];
+      });
+
+      showToast(
+        data.is_draft === false
+          ? `Order ${savedOrder.kode_invoice} berhasil disimpan.`
+          : `Order ${savedOrder.kode_invoice} disimpan sebagai draft.`
+      );
+    } catch (err: any) {
+      showToast('Gagal menyimpan order: ' + err.message);
+      // Reload daftar asli jika terjadi error
+      api.getOrders().then(setOrders).catch(console.error);
+    }
   };
 
   // Handler: Update status cucian
@@ -287,7 +374,6 @@ export default function App() {
         scaleStatus={scaleStatus}
         ordersCount={orders.length}
         onTare={handleTare}
-        onOpenSimulator={() => setIsSimulatorOpen(true)}
         onOpenLogs={() => setIsLogsOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenDocs={() => setIsDocsOpen(true)}
@@ -392,12 +478,6 @@ export default function App() {
         isOpen={isInvoiceOpen}
         onClose={() => setIsInvoiceOpen(false)}
         settings={settings}
-      />
-
-      <ScaleSimulator
-        isOpen={isSimulatorOpen}
-        onClose={() => setIsSimulatorOpen(false)}
-        currentScaleWeight={scaleStatus.currentWeight}
       />
 
       <SettingsModal

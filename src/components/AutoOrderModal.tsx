@@ -126,14 +126,20 @@ export const AutoOrderModal: React.FC<AutoOrderModalProps> = ({
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="text-base font-bold text-slate-900">
-                  {order.is_draft ? 'Order Baru Terdeteksi' : 'Lengkapi Data Pelanggan'}
+                  {order.id.startsWith('new-')
+                    ? 'Input Order Baru'
+                    : order.is_draft
+                    ? 'Order Baru Terdeteksi'
+                    : 'Lengkapi Data Pelanggan'}
                 </h3>
                 <span className="text-xs px-2 py-0.5 rounded-md bg-white text-slate-700 font-mono font-semibold border border-slate-200">
-                  {order.kode_invoice}
+                  {order.id.startsWith('new-') ? 'Order Baru' : order.kode_invoice}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Data berat stabil dari timbangan IoT berhasil ditangkap
+                {order.id.startsWith('new-')
+                  ? 'Masukkan rincian cucian & data pelanggan'
+                  : 'Data berat stabil dari timbangan IoT berhasil ditangkap'}
               </p>
             </div>
           </div>
