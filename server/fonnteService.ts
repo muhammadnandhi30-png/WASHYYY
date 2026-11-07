@@ -33,6 +33,14 @@ export function formatRupiah(num: number): string {
   return new Intl.NumberFormat('id-ID').format(num);
 }
 
+function formatTemplate(template: string, vars: Record<string, string | number>): string {
+  let res = template;
+  for (const [key, val] of Object.entries(vars)) {
+    res = res.replace(new RegExp(`\\{${key}\\}`, 'g'), String(val));
+  }
+  return res;
+}
+
 /**
  * Service integrasi Fonnte WhatsApp API
  */
@@ -162,8 +170,19 @@ export const fonnteService = {
    * Kirim WhatsApp konfirmasi saat order baru dilengkapi datanya
    */
   async sendOrderConfirmation(order: Order) {
+    const settings = await db.getSettings();
     const formattedTotal = formatRupiah(order.total_harga);
-    const pesan = `Halo ${order.nama_pelanggan}, cucian Anda (${order.berat} kg) sudah kami terima. Invoice ${order.kode_invoice}. Total Rp ${formattedTotal}. Kami kabari saat selesai.`;
+    const defaultTpl = 'Halo {nama}, cucian {layanan} Anda ({berat} kg) sudah kami terima di {toko}. Invoice {invoice}. Total Rp {total}. Kami kabari saat selesai.';
+    const tpl = settings.template_wa_konfirmasi || defaultTpl;
+    const pesan = formatTemplate(tpl, {
+      nama: order.nama_pelanggan,
+      layanan: order.kategori_layanan || 'Pakaian',
+      berat: order.berat,
+      toko: settings.nama_laundry,
+      invoice: order.kode_invoice,
+      total: formattedTotal,
+      alamat: order.alamat || '',
+    });
     return this.sendMessage(order.id, order.nomor_wa, pesan, 'KONFIRMASI_ORDER');
   },
 
@@ -172,14 +191,34 @@ export const fonnteService = {
    * Pesan berbeda untuk Self Pick-up dan Delivery
    */
   async sendOrderCompleted(order: Order) {
+    const settings = await db.getSettings();
     const formattedTotal = formatRupiah(order.total_harga);
     let pesan = '';
 
     if (order.opsi_pengambilan === 'Delivery') {
-      const alamat = order.alamat || 'alamat tujuan Anda';
-      pesan = `Halo ${order.nama_pelanggan}, laundry Anda sudah Selesai dan akan segera diantar ke ${alamat}. Total Rp ${formattedTotal}.`;
+      const defaultTpl = 'Halo {nama}, laundry {layanan} Anda sudah Selesai dan akan segera diantar ke {alamat}. Total Rp {total}.';
+      const tpl = settings.template_wa_selesai_delivery || defaultTpl;
+      pesan = formatTemplate(tpl, {
+        nama: order.nama_pelanggan,
+        layanan: order.kategori_layanan || 'Pakaian',
+        berat: order.berat,
+        toko: settings.nama_laundry,
+        invoice: order.kode_invoice,
+        total: formattedTotal,
+        alamat: order.alamat || 'alamat tujuan Anda',
+      });
     } else {
-      pesan = `Halo ${order.nama_pelanggan}, laundry Anda sudah Selesai dan siap diambil. Total Rp ${formattedTotal}. Terima kasih.`;
+      const defaultTpl = 'Halo {nama}, laundry {layanan} Anda sudah Selesai dan siap diambil di {toko}. Total Rp {total}. Terima kasih.';
+      const tpl = settings.template_wa_selesai_pickup || defaultTpl;
+      pesan = formatTemplate(tpl, {
+        nama: order.nama_pelanggan,
+        layanan: order.kategori_layanan || 'Pakaian',
+        berat: order.berat,
+        toko: settings.nama_laundry,
+        invoice: order.kode_invoice,
+        total: formattedTotal,
+        alamat: order.alamat || '',
+      });
     }
 
     return this.sendMessage(order.id, order.nomor_wa, pesan, 'CUCIAN_SELESAI');

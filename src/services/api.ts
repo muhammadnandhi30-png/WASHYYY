@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Order, Settings, ScaleStatus, NotificationLog } from '../types.js';
+import { Order, Settings, ScaleStatus, NotificationLog, KategoriLayanan } from '../types.js';
 
 const API_BASE = '/api';
 
@@ -29,6 +29,8 @@ export const api = {
     nomor_wa?: string;
     opsi_pengambilan?: string;
     alamat?: string;
+    kategori_layanan?: KategoriLayanan;
+    harga_per_kg?: number;
   }): Promise<Order> {
     const res = await fetch(`${API_BASE}/orders`, {
       method: 'POST',

@@ -29,8 +29,7 @@ interface SidebarProps {
   onOpenLogs: () => void;
   onOpenSettings: () => void;
   onOpenDocs: () => void;
-  cashierName: string;
-  onSwitchCashier: () => void;
+  cashierName?: string;
   isUsingSupabase: boolean;
   activeNav: string;
   setActiveNav: (nav: string) => void;
@@ -47,8 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenLogs,
   onOpenSettings,
   onOpenDocs,
-  cashierName,
-  onSwitchCashier,
+  cashierName = 'Kasir',
   isUsingSupabase,
   activeNav,
   setActiveNav,
@@ -230,25 +228,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Sidebar Footer: Cashier Profile & Database */}
         <div className="p-4 border-t border-slate-100 space-y-3 bg-slate-50/50">
-          <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl p-2.5">
-            <div className="flex items-center space-x-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
-                <UserCheck className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-900 truncate">{cashierName}</p>
-                <p className="text-[10px] text-slate-500">Shift Aktif</p>
-              </div>
+          <div className="flex items-center space-x-2.5 bg-white border border-slate-200 rounded-xl p-2.5">
+            <div className="w-7 h-7 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+              <UserCheck className="w-4 h-4" />
             </div>
-
-            <button
-              onClick={onSwitchCashier}
-              title="Ganti shift kasir"
-              className="min-h-[36px] min-w-[36px] flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
-              aria-label="Ganti shift kasir"
-            >
-              <ArrowRightLeft className="w-3.5 h-3.5" />
-            </button>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-slate-900 truncate">{cashierName}</p>
+              <p className="text-[10px] text-slate-500">Petugas Aktif</p>
+            </div>
           </div>
 
           <div className="flex items-center justify-between px-1 text-[11px] text-slate-500">

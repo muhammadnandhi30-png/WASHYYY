@@ -19,8 +19,11 @@ import {
   Copy,
   Check,
   Calendar,
+  Download,
+  Printer,
 } from 'lucide-react';
 import { Order, StatusCucian } from '../types.js';
+import { exportOrdersToExcel } from '../utils/exportExcel.js';
 
 interface OrderListProps {
   orders: Order[];
@@ -29,6 +32,7 @@ interface OrderListProps {
   onOpenPaymentModal: (order: Order) => void;
   onResendWhatsApp: (orderId: string) => Promise<void>;
   onDeleteOrder: (orderId: string) => Promise<void>;
+  onPrintInvoice: (order: Order) => void;
 }
 
 export const OrderList: React.FC<OrderListProps> = ({
@@ -38,6 +42,7 @@ export const OrderList: React.FC<OrderListProps> = ({
   onOpenPaymentModal,
   onResendWhatsApp,
   onDeleteOrder,
+  onPrintInvoice,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('Semua');
@@ -147,6 +152,15 @@ export const OrderList: React.FC<OrderListProps> = ({
               </button>
             ))}
           </div>
+
+          <button
+            onClick={() => exportOrdersToExcel(filteredOrders)}
+            title="Ekspor catatan penjualan ke format Excel (CSV)"
+            className="min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors flex items-center justify-center space-x-1.5 shrink-0"
+          >
+            <Download className="w-4 h-4" />
+            <span>Ekspor Excel</span>
+          </button>
         </div>
       </div>
 
@@ -318,6 +332,15 @@ export const OrderList: React.FC<OrderListProps> = ({
 
                   {/* Secondary Quick Action Tools with 44px min touch target */}
                   <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => onPrintInvoice(order)}
+                      title="Cetak Invoice"
+                      className="min-h-[44px] min-w-[44px] p-2.5 rounded-lg text-slate-500 hover:text-sky-700 hover:bg-slate-100 border border-slate-200 flex items-center justify-center transition-colors"
+                      aria-label="Cetak invoice"
+                    >
+                      <Printer className="w-4 h-4" />
+                    </button>
+
                     {order.nomor_wa && (
                       <button
                         onClick={() => handleResend(order.id)}
@@ -425,10 +448,15 @@ export const OrderList: React.FC<OrderListProps> = ({
 
                     {/* Weight & Total */}
                     <td className="py-4 px-4 whitespace-nowrap">
-                      <div className="font-mono font-bold text-slate-900 text-sm">
-                        {order.berat.toFixed(2)} kg
+                      <div className="flex items-center space-x-1.5">
+                        <span className="font-mono font-bold text-slate-900 text-sm">
+                          {order.berat.toFixed(2)} kg
+                        </span>
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-sky-50 text-sky-800 border border-sky-100">
+                          {order.kategori_layanan || 'Pakaian'}
+                        </span>
                       </div>
-                      <div className="text-xs font-mono text-emerald-700 font-semibold">
+                      <div className="text-xs font-mono text-emerald-700 font-semibold mt-0.5">
                         Rp {order.total_harga.toLocaleString('id-ID')}
                       </div>
                     </td>
@@ -523,6 +551,16 @@ export const OrderList: React.FC<OrderListProps> = ({
                             Diambil
                           </button>
                         )}
+
+                        {/* Cetak Invoice */}
+                        <button
+                          onClick={() => onPrintInvoice(order)}
+                          title="Cetak invoice transaksi"
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-sky-700 hover:bg-slate-100 transition-colors"
+                          aria-label="Cetak invoice"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                        </button>
 
                         {/* Kirim Ulang WA */}
                         {order.nomor_wa && (

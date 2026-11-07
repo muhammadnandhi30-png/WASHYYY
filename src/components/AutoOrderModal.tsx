@@ -15,14 +15,18 @@ import {
   Scale,
   Save,
   AlertCircle,
+  Shirt,
+  Layers,
+  Grid,
 } from 'lucide-react';
-import { Order, OpsiPengambilan } from '../types.js';
+import { Order, OpsiPengambilan, KategoriLayanan, Settings } from '../types.js';
 
 interface AutoOrderModalProps {
   order: Order | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (orderId: string, data: Partial<Order>) => Promise<void>;
+  settings: Settings;
 }
 
 export const AutoOrderModal: React.FC<AutoOrderModalProps> = ({
@@ -30,16 +34,27 @@ export const AutoOrderModal: React.FC<AutoOrderModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  settings,
 }) => {
   if (!isOpen || !order) return null;
 
   const [namaPelanggan, setNamaPelanggan] = useState('');
   const [nomorWa, setNomorWa] = useState('');
   const [opsiPengambilan, setOpsiPengambilan] = useState<OpsiPengambilan>('Self Pick-up');
+  const [kategoriLayanan, setKategoriLayanan] = useState<KategoriLayanan>('Pakaian');
   const [alamat, setAlamat] = useState('');
   const [customWeight, setCustomWeight] = useState<number>(order.berat);
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const getRateForCategory = (cat: KategoriLayanan): number => {
+    if (cat === 'Sprey') return settings.harga_sprei || 12000;
+    if (cat === 'Karpet') return settings.harga_karpet || 15000;
+    return settings.harga_pakaian || settings.harga_per_kg || 6000;
+  };
+
+  const hargaPerKg = getRateForCategory(kategoriLayanan);
+  const currentTotal = Math.round(customWeight * hargaPerKg);
 
   // Sync state saat modal terbuka atau order berganti
   useEffect(() => {
@@ -47,6 +62,7 @@ export const AutoOrderModal: React.FC<AutoOrderModalProps> = ({
       setNamaPelanggan(order.nama_pelanggan !== 'Pelanggan Baru' ? order.nama_pelanggan : '');
       setNomorWa(order.nomor_wa || '');
       setOpsiPengambilan(order.opsi_pengambilan || 'Self Pick-up');
+      setKategoriLayanan(order.kategori_layanan || 'Pakaian');
       setAlamat(order.alamat || '');
       setCustomWeight(order.berat);
       setErrorMessage('');
@@ -63,9 +79,6 @@ export const AutoOrderModal: React.FC<AutoOrderModalProps> = ({
     }
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
-
-  const hargaPerKg = order.harga_per_kg || 6000;
-  const currentTotal = Math.round(customWeight * hargaPerKg);
 
   const handleSubmit = async (isFinal: boolean) => {
     setErrorMessage('');
@@ -84,6 +97,8 @@ export const AutoOrderModal: React.FC<AutoOrderModalProps> = ({
         opsi_pengambilan: opsiPengambilan,
         alamat: opsiPengambilan === 'Delivery' ? alamat.trim() : '',
         berat: customWeight,
+        kategori_layanan: kategoriLayanan,
+        harga_per_kg: hargaPerKg,
         is_draft: !isFinal,
       });
       onClose();
@@ -165,6 +180,83 @@ export const AutoOrderModal: React.FC<AutoOrderModalProps> = ({
               <span>{errorMessage}</span>
             </div>
           )}
+
+          {/* Pilihan Kategori Layanan / Tarif */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Pilih Layanan & Tarif
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setKategoriLayanan('Pakaian')}
+                className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs transition-colors ${
+                  kategoriLayanan === 'Pakaian'
+                    ? 'bg-sky-50 border-sky-600 text-sky-900 font-semibold shadow-xs'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Shirt className="w-4 h-4 mb-1 text-sky-600" />
+                <span>Pakaian</span>
+                <span className="text-[10px] text-slate-500 font-mono mt-0.5">
+                  Rp {(settings.harga_pakaian || settings.harga_per_kg || 6000).toLocaleString('id-ID')}/kg
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setKategoriLayanan('Sprey')}
+                className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs transition-colors ${
+                  kategoriLayanan === 'Sprey'
+                    ? 'bg-sky-50 border-sky-600 text-sky-900 font-semibold shadow-xs'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Layers className="w-4 h-4 mb-1 text-indigo-600" />
+                <span>Sprey</span>
+                <span className="text-[10px] text-slate-500 font-mono mt-0.5">
+                  Rp {(settings.harga_sprei || 12000).toLocaleString('id-ID')}/kg
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setKategoriLayanan('Karpet')}
+                className={`flex flex-col items-center justify-center p-2.5 rounded-xl border text-xs transition-colors ${
+                  kategoriLayanan === 'Karpet'
+                    ? 'bg-sky-50 border-sky-600 text-sky-900 font-semibold shadow-xs'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Grid className="w-4 h-4 mb-1 text-emerald-600" />
+                <span>Karpet</span>
+                <span className="text-[10px] text-slate-500 font-mono mt-0.5">
+                  Rp {(settings.harga_karpet || 15000).toLocaleString('id-ID')}/kg
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* Edit Berat Manual bila diperlukan */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Berat Cucian (kg)
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <Scale className="w-4 h-4" />
+              </div>
+              <input
+                type="number"
+                step="0.01"
+                min="0.1"
+                required
+                value={customWeight || ''}
+                onChange={(e) => setCustomWeight(parseFloat(e.target.value) || 0)}
+                className="w-full pl-9 pr-3 py-2 min-h-[40px] bg-white border border-slate-200 rounded-xl text-slate-900 text-base sm:text-sm font-mono font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
+              />
+            </div>
+          </div>
 
           {/* Nama Pelanggan */}
           <div>

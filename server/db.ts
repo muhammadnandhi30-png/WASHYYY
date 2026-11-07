@@ -49,12 +49,18 @@ function generateInvoiceCode(): string {
 
 let settingsStore: Settings = {
   harga_per_kg: 6000,
+  harga_pakaian: 6000,
+  harga_sprei: 12000,
+  harga_karpet: 15000,
   nama_laundry: 'Smart Laundry Express',
   alamat_laundry: 'Jl. Sukses Makmur No. 42, Jakarta',
   kontak_laundry: '081234567890',
   udp_port: Number(process.env.UDP_PORT) || 4210,
   device_id: 'scale-01',
   device_key: process.env.SCALE_DEVICE_KEY || 'smart-laundry-secret-key-2026',
+  template_wa_konfirmasi: 'Halo {nama}, cucian {layanan} Anda ({berat} kg) sudah kami terima di {toko}. Invoice {invoice}. Total Rp {total}. Kami kabari saat selesai.',
+  template_wa_selesai_pickup: 'Halo {nama}, laundry {layanan} Anda sudah Selesai dan siap diambil di {toko}. Total Rp {total}. Terima kasih.',
+  template_wa_selesai_delivery: 'Halo {nama}, laundry {layanan} Anda sudah Selesai dan akan segera diantar ke {alamat}. Total Rp {total}.',
 };
 
 // Data awal untuk demonstrasi kasir
@@ -139,9 +145,15 @@ export const db = {
           const mapped: any = { ...settingsStore };
           for (const item of data) {
             if (item.key === 'harga_per_kg') mapped.harga_per_kg = Number(item.value);
+            else if (item.key === 'harga_pakaian') mapped.harga_pakaian = Number(item.value);
+            else if (item.key === 'harga_sprei') mapped.harga_sprei = Number(item.value);
+            else if (item.key === 'harga_karpet') mapped.harga_karpet = Number(item.value);
             else if (item.key === 'nama_laundry') mapped.nama_laundry = item.value;
             else if (item.key === 'alamat_laundry') mapped.alamat_laundry = item.value;
             else if (item.key === 'kontak_laundry') mapped.kontak_laundry = item.value;
+            else if (item.key === 'template_wa_konfirmasi') mapped.template_wa_konfirmasi = item.value;
+            else if (item.key === 'template_wa_selesai_pickup') mapped.template_wa_selesai_pickup = item.value;
+            else if (item.key === 'template_wa_selesai_delivery') mapped.template_wa_selesai_delivery = item.value;
           }
           return mapped;
         }
@@ -157,17 +169,26 @@ export const db = {
 
     if (isUsingSupabase && supabase) {
       try {
-        if (updates.harga_per_kg !== undefined) {
-          await supabase.from('settings').upsert({
-            key: 'harga_per_kg',
-            value: String(updates.harga_per_kg),
-          });
-        }
-        if (updates.nama_laundry) {
-          await supabase.from('settings').upsert({
-            key: 'nama_laundry',
-            value: updates.nama_laundry,
-          });
+        const keysToSave = [
+          'harga_per_kg',
+          'harga_pakaian',
+          'harga_sprei',
+          'harga_karpet',
+          'nama_laundry',
+          'alamat_laundry',
+          'kontak_laundry',
+          'template_wa_konfirmasi',
+          'template_wa_selesai_pickup',
+          'template_wa_selesai_delivery',
+        ];
+
+        for (const k of keysToSave) {
+          if ((updates as any)[k] !== undefined) {
+            await supabase.from('settings').upsert({
+              key: k,
+              value: String((updates as any)[k]),
+            });
+          }
         }
       } catch (err) {
         console.error('[DB] Gagal menyimpan settings ke Supabase:', err);
@@ -210,9 +231,12 @@ export const db = {
     return ordersStore.find((o) => o.id === id) || null;
   },
 
-  async createDraftOrder(berat: number): Promise<Order> {
+  async createDraftOrder(berat: number, kategori: 'Pakaian' | 'Sprey' | 'Karpet' = 'Pakaian'): Promise<Order> {
     const settings = await this.getSettings();
-    const hargaPerKg = settings.harga_per_kg || 6000;
+    let hargaPerKg = settings.harga_pakaian || settings.harga_per_kg || 6000;
+    if (kategori === 'Sprey') hargaPerKg = settings.harga_sprei || 12000;
+    if (kategori === 'Karpet') hargaPerKg = settings.harga_karpet || 15000;
+
     const roundedBerat = Math.round(berat * 100) / 100;
     const totalHarga = Math.round(roundedBerat * hargaPerKg);
 
@@ -229,6 +253,7 @@ export const db = {
       alamat: '',
       status_pembayaran: 'Belum Bayar',
       metode_pembayaran: null,
+      kategori_layanan: kategori,
       is_draft: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

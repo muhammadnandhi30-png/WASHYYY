@@ -17,6 +17,7 @@ import { ScaleSimulator } from './components/ScaleSimulator.js';
 import { SettingsModal } from './components/SettingsModal.js';
 import { NotificationLogsModal } from './components/NotificationLogsModal.js';
 import { DocsModal } from './components/DocsModal.js';
+import { InvoiceModal } from './components/InvoiceModal.js';
 import { api } from './services/api.js';
 import { getSocket } from './services/socket.js';
 import { Order, ScaleStatus, Settings, StatusCucian, MetodePembayaran } from './types.js';
@@ -57,12 +58,15 @@ export default function App() {
   const [activePaymentOrder, setActivePaymentOrder] = useState<Order | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
+  const [activeInvoiceOrder, setActiveInvoiceOrder] = useState<Order | null>(null);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+
   const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLogsOpen, setIsLogsOpen] = useState(false);
   const [isDocsOpen, setIsDocsOpen] = useState(false);
 
-  const [cashierName, setCashierName] = useState('Kasir Pagi');
+  const cashierName = 'Kasir';
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -156,22 +160,22 @@ export default function App() {
     {
       id: 'pakaian',
       name: 'Pakaian',
-      rate: settings.harga_per_kg || 6000,
+      rate: settings.harga_pakaian || settings.harga_per_kg || 6000,
       icon: Shirt,
     },
     {
       id: 'sprey',
       name: 'Sprey',
-      rate: (settings.harga_per_kg || 6000) * 2, // Rp 12.000 / kg
+      rate: settings.harga_sprei || 12000,
       icon: Layers,
     },
     {
       id: 'karpet',
       name: 'Karpet',
-      rate: 15000, // Rp 15.000 / kg
+      rate: settings.harga_karpet || 15000,
       icon: Grid,
     },
-  ], [settings.harga_per_kg]);
+  ], [settings.harga_per_kg, settings.harga_pakaian, settings.harga_sprei, settings.harga_karpet]);
 
   const selectedService = useMemo(() => {
     return services.find((s) => s.id === selectedServiceId) || services[0];
@@ -189,21 +193,14 @@ export default function App() {
 
   // Handler: Input Order Manual
   const handleManualOrder = async () => {
-    const inputWeight = prompt(`Masukkan berat cucian untuk ${selectedService.name} (kg):`, '2.5');
-    if (!inputWeight) return;
-    const w = parseFloat(inputWeight);
-    if (isNaN(w) || w <= 0) {
-      alert('Berat harus berupa angka lebih dari 0');
-      return;
-    }
-
     try {
-      const order = await api.createOrder({ berat: w });
-      // Update rate sesuai service yang sedang dipilih
-      const updated = await api.updateOrder(order.id, {
+      const defaultWeight = scaleStatus.currentWeight > 0.1 ? scaleStatus.currentWeight : 2.5;
+      const order = await api.createOrder({
+        berat: defaultWeight,
+        kategori_layanan: (selectedService.name as any) || 'Pakaian',
         harga_per_kg: selectedService.rate,
       });
-      setActiveOrderModal(updated);
+      setActiveOrderModal(order);
       setIsOrderModalOpen(true);
     } catch (err: any) {
       showToast('Gagal membuat order: ' + err.message);
@@ -272,13 +269,6 @@ export default function App() {
     }
   };
 
-  // Switch kasir profile
-  const handleSwitchCashier = () => {
-    const next = cashierName === 'Kasir Pagi' ? 'Kasir Sore' : 'Kasir Pagi';
-    setCashierName(next);
-    showToast(`Beralih profil ke ${next}`);
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex font-sans selection:bg-sky-100 selection:text-sky-900 antialiased overflow-x-hidden">
       {/* Toast Notification Banner */}
@@ -302,7 +292,6 @@ export default function App() {
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenDocs={() => setIsDocsOpen(true)}
         cashierName={cashierName}
-        onSwitchCashier={handleSwitchCashier}
         isUsingSupabase={systemInfo.isUsingSupabase}
         activeNav={activeNav}
         setActiveNav={setActiveNav}
@@ -356,6 +345,10 @@ export default function App() {
                 }}
                 onResendWhatsApp={handleResendWhatsApp}
                 onDeleteOrder={handleDeleteOrder}
+                onPrintInvoice={(order) => {
+                  setActiveInvoiceOrder(order);
+                  setIsInvoiceOpen(true);
+                }}
               />
             </div>
 
@@ -384,6 +377,7 @@ export default function App() {
         isOpen={isOrderModalOpen}
         onClose={() => setIsOrderModalOpen(false)}
         onSave={handleSaveOrderDraft}
+        settings={settings}
       />
 
       <PaymentModal
@@ -391,6 +385,13 @@ export default function App() {
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         onConfirmPayment={handleConfirmPayment}
+      />
+
+      <InvoiceModal
+        order={activeInvoiceOrder}
+        isOpen={isInvoiceOpen}
+        onClose={() => setIsInvoiceOpen(false)}
+        settings={settings}
       />
 
       <ScaleSimulator

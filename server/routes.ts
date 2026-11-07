@@ -41,20 +41,27 @@ export function createApiRouter(io: SocketIOServer) {
   // POST /api/orders - Buat order manual
   router.post('/orders', async (req, res) => {
     try {
-      const { berat, nama_pelanggan, nomor_wa, opsi_pengambilan, alamat } = req.body;
+      const { berat, nama_pelanggan, nomor_wa, opsi_pengambilan, alamat, kategori_layanan, harga_per_kg } = req.body;
       const parsedWeight = parseFloat(berat);
       if (isNaN(parsedWeight) || parsedWeight <= 0) {
         return res.status(400).json({ success: false, error: 'Berat harus berupa angka positif' });
       }
 
-      const order = await db.createDraftOrder(parsedWeight);
-      const updated = await db.updateOrder(order.id, {
+      const kategori = kategori_layanan || 'Pakaian';
+      const order = await db.createDraftOrder(parsedWeight, kategori);
+      const updates: any = {
         nama_pelanggan: nama_pelanggan || 'Pelanggan Baru',
         nomor_wa: nomor_wa || '',
         opsi_pengambilan: opsi_pengambilan || 'Self Pick-up',
         alamat: alamat || '',
+        kategori_layanan: kategori,
         is_draft: false,
-      });
+      };
+      if (harga_per_kg !== undefined && !isNaN(parseFloat(harga_per_kg))) {
+        updates.harga_per_kg = parseFloat(harga_per_kg);
+      }
+
+      const updated = await db.updateOrder(order.id, updates);
 
       // Emit event socket
       io.emit('order:created', updated);
@@ -74,7 +81,7 @@ export function createApiRouter(io: SocketIOServer) {
   router.patch('/orders/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const { nama_pelanggan, nomor_wa, opsi_pengambilan, alamat, berat, is_draft } = req.body;
+      const { nama_pelanggan, nomor_wa, opsi_pengambilan, alamat, berat, is_draft, kategori_layanan, harga_per_kg } = req.body;
 
       // Validasi alamat bila opsi Delivery
       if (opsi_pengambilan === 'Delivery' && (!alamat || alamat.trim().length === 0)) {
@@ -91,6 +98,10 @@ export function createApiRouter(io: SocketIOServer) {
       if (alamat !== undefined) updates.alamat = alamat;
       if (berat !== undefined) updates.berat = parseFloat(berat);
       if (is_draft !== undefined) updates.is_draft = is_draft;
+      if (kategori_layanan !== undefined) updates.kategori_layanan = kategori_layanan;
+      if (harga_per_kg !== undefined && !isNaN(parseFloat(harga_per_kg))) {
+        updates.harga_per_kg = parseFloat(harga_per_kg);
+      }
 
       const order = await db.updateOrder(id, updates);
       if (!order) return res.status(404).json({ success: false, error: 'Order tidak ditemukan' });
@@ -235,16 +246,43 @@ export function createApiRouter(io: SocketIOServer) {
 
   router.put('/settings', async (req, res) => {
     try {
-      const { harga_per_kg, nama_laundry, alamat_laundry, kontak_laundry } = req.body;
+      const {
+        harga_per_kg,
+        harga_pakaian,
+        harga_sprei,
+        harga_karpet,
+        nama_laundry,
+        alamat_laundry,
+        kontak_laundry,
+        template_wa_konfirmasi,
+        template_wa_selesai_pickup,
+        template_wa_selesai_delivery,
+      } = req.body;
+
       const updates: any = {};
       if (harga_per_kg !== undefined) {
         const p = parseFloat(harga_per_kg);
         if (isNaN(p) || p < 0) return res.status(400).json({ success: false, error: 'Harga harus berupa angka valid' });
         updates.harga_per_kg = p;
       }
-      if (nama_laundry) updates.nama_laundry = nama_laundry;
-      if (alamat_laundry) updates.alamat_laundry = alamat_laundry;
-      if (kontak_laundry) updates.kontak_laundry = kontak_laundry;
+      if (harga_pakaian !== undefined) {
+        const p = parseFloat(harga_pakaian);
+        if (!isNaN(p) && p >= 0) updates.harga_pakaian = p;
+      }
+      if (harga_sprei !== undefined) {
+        const p = parseFloat(harga_sprei);
+        if (!isNaN(p) && p >= 0) updates.harga_sprei = p;
+      }
+      if (harga_karpet !== undefined) {
+        const p = parseFloat(harga_karpet);
+        if (!isNaN(p) && p >= 0) updates.harga_karpet = p;
+      }
+      if (nama_laundry !== undefined) updates.nama_laundry = nama_laundry;
+      if (alamat_laundry !== undefined) updates.alamat_laundry = alamat_laundry;
+      if (kontak_laundry !== undefined) updates.kontak_laundry = kontak_laundry;
+      if (template_wa_konfirmasi !== undefined) updates.template_wa_konfirmasi = template_wa_konfirmasi;
+      if (template_wa_selesai_pickup !== undefined) updates.template_wa_selesai_pickup = template_wa_selesai_pickup;
+      if (template_wa_selesai_delivery !== undefined) updates.template_wa_selesai_delivery = template_wa_selesai_delivery;
 
       const updated = await db.updateSettings(updates);
       io.emit('settings:updated', updated);

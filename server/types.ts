@@ -7,6 +7,7 @@ export type StatusCucian = 'Menunggu' | 'Dicuci' | 'Selesai' | 'Diambil';
 export type OpsiPengambilan = 'Self Pick-up' | 'Delivery';
 export type StatusPembayaran = 'Belum Bayar' | 'Lunas';
 export type MetodePembayaran = 'Tunai' | 'Transfer' | 'QRIS';
+export type KategoriLayanan = 'Pakaian' | 'Sprey' | 'Karpet';
 
 export interface Order {
   id: string;
@@ -21,6 +22,7 @@ export interface Order {
   alamat?: string;
   status_pembayaran: StatusPembayaran;
   metode_pembayaran?: MetodePembayaran | null;
+  kategori_layanan?: KategoriLayanan;
   is_draft: boolean;
   created_at: string;
   updated_at: string;
@@ -28,12 +30,18 @@ export interface Order {
 
 export interface Settings {
   harga_per_kg: number;
+  harga_pakaian?: number;
+  harga_sprei?: number;
+  harga_karpet?: number;
   nama_laundry: string;
   alamat_laundry: string;
   kontak_laundry: string;
   udp_port: number;
   device_id: string;
   device_key: string;
+  template_wa_konfirmasi?: string;
+  template_wa_selesai_pickup?: string;
+  template_wa_selesai_delivery?: string;
 }
 
 export interface NotificationLog {
