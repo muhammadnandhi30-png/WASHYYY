@@ -33,6 +33,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
+  // Keyboard shortcut: Escape to close
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -57,41 +68,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="relative w-full max-w-lg bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
-              <SettingsIcon className="w-4 h-4" />
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+    >
+      <div className="relative w-full max-w-lg bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden my-6">
+        <div className="bg-slate-50 px-5 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+              <SettingsIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Pengaturan Sistem</h3>
-              <p className="text-xs text-slate-400">Tarif laundry, profil gerai, dan integrasi backend</p>
+              <h3 className="text-base font-bold text-slate-900">Pengaturan Sistem</h3>
+              <p className="text-xs text-slate-500">Tarif laundry, profil gerai, dan integrasi backend</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+            aria-label="Tutup pengaturan"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
           {savedSuccess && (
-            <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs flex items-center space-x-2">
-              <Check className="w-4 h-4" />
-              <span>Pengaturan berhasil disimpan!</span>
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center space-x-2">
+              <Check className="w-4 h-4 text-emerald-600" />
+              <span>Pengaturan berhasil disimpan.</span>
             </div>
           )}
 
           {/* Harga Per Kilogram */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
-              Tarif Cuci Reguler (per Kilogram) <span className="text-rose-400">*</span>
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              Tarif Cuci Reguler (per Kilogram) <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-sm font-semibold text-slate-400">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-sm font-semibold text-slate-500">
                 Rp
               </span>
               <input
@@ -101,17 +118,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 required
                 value={hargaPerKg}
                 onChange={(e) => setHargaPerKg(Number(e.target.value))}
-                className="w-full pl-10 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full pl-10 pr-3 py-2.5 min-h-[44px] bg-white border border-slate-200 rounded-xl text-slate-900 font-mono text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
               />
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">
+            <p className="text-[11px] text-slate-500 mt-1">
               Harga ini otomatis dikalikan dengan berat yang terdeteksi dari timbangan ESP32.
             </p>
           </div>
 
           {/* Nama Laundry */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
               Nama Gerai Laundry
             </label>
             <input
@@ -119,14 +136,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               required
               value={namaLaundry}
               onChange={(e) => setNamaLaundry(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              className="w-full px-3 py-2.5 min-h-[44px] bg-white border border-slate-200 rounded-xl text-slate-900 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
             />
           </div>
 
           {/* Alamat & Kontak */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                 Alamat Fisik Gerai
               </label>
               <input
@@ -134,11 +151,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 value={alamatLaundry}
                 onChange={(e) => setAlamatLaundry(e.target.value)}
                 placeholder="Jl. Sukses Makmur No. 42"
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full px-3 py-2.5 min-h-[44px] bg-white border border-slate-200 rounded-xl text-slate-900 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
                 Nomor Kontak / CS
               </label>
               <input
@@ -146,27 +163,27 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 value={kontakLaundry}
                 onChange={(e) => setKontakLaundry(e.target.value)}
                 placeholder="081234567890"
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="w-full px-3 py-2.5 min-h-[44px] bg-white border border-slate-200 rounded-xl text-slate-900 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500"
               />
             </div>
           </div>
 
           {/* Status Integrasi & Keamanan */}
-          <div className="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2.5">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide block mb-1">
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
+            <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide block mb-1">
               Status Sistem & Konektivitas:
             </span>
 
             <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-2 text-slate-300">
-                <Database className="w-3.5 h-3.5 text-cyan-400" />
+              <div className="flex items-center space-x-2 text-slate-700">
+                <Database className="w-3.5 h-3.5 text-sky-600" />
                 <span>Database Supabase PostgreSQL</span>
               </div>
               <span
-                className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
                   isUsingSupabase
-                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                    : 'bg-amber-950 text-amber-300 border border-amber-800'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-amber-50 text-amber-800 border-amber-200'
                 }`}
               >
                 {isUsingSupabase ? 'Terkoneksi' : 'In-Memory Fallback'}
@@ -174,15 +191,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-2 text-slate-300">
-                <MessageSquare className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="flex items-center space-x-2 text-slate-700">
+                <MessageSquare className="w-3.5 h-3.5 text-sky-600" />
                 <span>Gateway WhatsApp Fonnte</span>
               </div>
               <span
-                className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
                   hasFonnteToken
-                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                    : 'bg-blue-950 text-blue-300 border border-blue-800'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : 'bg-sky-50 text-sky-800 border-sky-200'
                 }`}
               >
                 {hasFonnteToken ? 'API Token Aktif' : 'Simulated Logger'}
@@ -190,26 +207,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center space-x-2 text-slate-300">
-                <Key className="w-3.5 h-3.5 text-amber-400" />
+              <div className="flex items-center space-x-2 text-slate-700">
+                <Key className="w-3.5 h-3.5 text-slate-500" />
                 <span>Port UDP ESP32</span>
               </div>
-              <span className="font-mono text-slate-300 text-xs">Port 4210</span>
+              <span className="font-mono text-slate-700 text-xs font-semibold">Port 4210</span>
             </div>
           </div>
 
-          <div className="pt-3 border-t border-slate-800 flex justify-end gap-2">
+          <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+              className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors border border-slate-200"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-lg shadow-cyan-600/25 transition-all flex items-center space-x-1.5"
+              className="min-h-[44px] px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold shadow-xs transition-colors flex items-center space-x-1.5"
             >
               <Save className="w-3.5 h-3.5" />
               <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Pengaturan'}</span>

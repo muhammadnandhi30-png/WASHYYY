@@ -3,11 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Header } from './components/Header.js';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Sidebar } from './components/Sidebar.js';
+import { DashboardHeader } from './components/DashboardHeader.js';
+import { ServiceCards, ServiceItem } from './components/ServiceCards.js';
+import { RevenueCard } from './components/RevenueCard.js';
+import { WeeklyReportCard } from './components/WeeklyReportCard.js';
 import { WeightDisplay } from './components/WeightDisplay.js';
-import { AutoOrderModal } from './components/AutoOrderModal.js';
 import { OrderList } from './components/OrderList.js';
+import { AutoOrderModal } from './components/AutoOrderModal.js';
 import { PaymentModal } from './components/PaymentModal.js';
 import { ScaleSimulator } from './components/ScaleSimulator.js';
 import { SettingsModal } from './components/SettingsModal.js';
@@ -16,7 +20,7 @@ import { DocsModal } from './components/DocsModal.js';
 import { api } from './services/api.js';
 import { getSocket } from './services/socket.js';
 import { Order, ScaleStatus, Settings, StatusCucian, MetodePembayaran } from './types.js';
-import { Bell, Sparkles } from 'lucide-react';
+import { CheckCircle2, Shirt, Layers, Grid } from 'lucide-react';
 
 export default function App() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -40,6 +44,11 @@ export default function App() {
     isUsingSupabase: false,
     hasFonnteToken: false,
   });
+
+  // Navigation & UI state
+  const [activeNav, setActiveNav] = useState('dashboard');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState('karpet');
 
   // Modal States
   const [activeOrderModal, setActiveOrderModal] = useState<Order | null>(null);
@@ -104,16 +113,15 @@ export default function App() {
       }));
     });
 
-    // Otomatis membuka pop-up saat order baru terbentuk dari kestabilan berat!
+    // Otomatis membuka pop-up saat order baru terbentuk dari kestabilan berat
     socket.on('order:created', (newOrder: Order) => {
-      console.log('[Socket Event] order:created diterima:', newOrder);
       setOrders((prev) => {
         const exists = prev.some((o) => o.id === newOrder.id);
         if (exists) return prev.map((o) => (o.id === newOrder.id ? newOrder : o));
         return [newOrder, ...prev];
       });
 
-      // Tampilkan Pop Up secara instan
+      // Tampilkan Pop Up
       setActiveOrderModal(newOrder);
       setIsOrderModalOpen(true);
       showToast(`Order baru terdeteksi: ${newOrder.kode_invoice} (${newOrder.berat} kg)`);
@@ -143,6 +151,32 @@ export default function App() {
     };
   }, [loadInitialData]);
 
+  // Layanan Laundry
+  const services: ServiceItem[] = useMemo(() => [
+    {
+      id: 'pakaian',
+      name: 'Pakaian',
+      rate: settings.harga_per_kg || 6000,
+      icon: Shirt,
+    },
+    {
+      id: 'sprey',
+      name: 'Sprey',
+      rate: (settings.harga_per_kg || 6000) * 2, // Rp 12.000 / kg
+      icon: Layers,
+    },
+    {
+      id: 'karpet',
+      name: 'Karpet',
+      rate: 15000, // Rp 15.000 / kg
+      icon: Grid,
+    },
+  ], [settings.harga_per_kg]);
+
+  const selectedService = useMemo(() => {
+    return services.find((s) => s.id === selectedServiceId) || services[0];
+  }, [services, selectedServiceId]);
+
   // Handler: Tare Timbangan
   const handleTare = async () => {
     try {
@@ -155,7 +189,7 @@ export default function App() {
 
   // Handler: Input Order Manual
   const handleManualOrder = async () => {
-    const inputWeight = prompt('Masukkan berat cucian (kg):', '2.5');
+    const inputWeight = prompt(`Masukkan berat cucian untuk ${selectedService.name} (kg):`, '2.5');
     if (!inputWeight) return;
     const w = parseFloat(inputWeight);
     if (isNaN(w) || w <= 0) {
@@ -165,7 +199,11 @@ export default function App() {
 
     try {
       const order = await api.createOrder({ berat: w });
-      setActiveOrderModal(order);
+      // Update rate sesuai service yang sedang dipilih
+      const updated = await api.updateOrder(order.id, {
+        harga_per_kg: selectedService.rate,
+      });
+      setActiveOrderModal(updated);
       setIsOrderModalOpen(true);
     } catch (err: any) {
       showToast('Gagal membuat order: ' + err.message);
@@ -178,7 +216,7 @@ export default function App() {
     setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
     showToast(
       data.is_draft === false
-        ? `Order ${updated.kode_invoice} berhasil disimpan! Pesan WhatsApp terkirim.`
+        ? `Order ${updated.kode_invoice} berhasil disimpan dan pesan WhatsApp terkirim.`
         : `Order ${updated.kode_invoice} disimpan sebagai draft.`
     );
   };
@@ -189,7 +227,7 @@ export default function App() {
       const updated = await api.updateStatus(orderId, status);
       setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
       if (status === 'Selesai') {
-        showToast(`Cucian ${updated.kode_invoice} SELESAI. Notifikasi WhatsApp terkirim otomatis!`);
+        showToast(`Cucian ${updated.kode_invoice} selesai. Notifikasi WhatsApp terkirim.`);
       } else {
         showToast(`Status ${updated.kode_invoice} diubah ke ${status}`);
       }
@@ -203,7 +241,7 @@ export default function App() {
     try {
       const updated = await api.updatePayment(orderId, 'Lunas', metode);
       setOrders((prev) => prev.map((o) => (o.id === orderId ? updated : o)));
-      showToast(`Pembayaran ${updated.kode_invoice} LUNAS via ${metode}`);
+      showToast(`Pembayaran ${updated.kode_invoice} lunas via ${metode}`);
     } catch (err: any) {
       showToast('Gagal update pembayaran: ' + err.message);
     }
@@ -214,7 +252,7 @@ export default function App() {
     try {
       const res = await api.resendWhatsApp(orderId);
       if (res.success) {
-        showToast('Pesan WhatsApp berhasil dikirim ulang ke pelanggan!');
+        showToast('Pesan WhatsApp berhasil dikirim ulang ke pelanggan.');
       } else {
         showToast('Gagal mengirim WhatsApp: ' + (res.error || 'Terjadi kesalahan'));
       }
@@ -242,57 +280,103 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex font-sans selection:bg-sky-100 selection:text-sky-900 antialiased overflow-x-hidden">
       {/* Toast Notification Banner */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
-          <div className="bg-slate-900 border border-cyan-500/50 shadow-2xl shadow-cyan-950/60 text-white px-4 py-3 rounded-xl flex items-center space-x-3 text-sm">
-            <Sparkles className="w-4 h-4 text-cyan-400 flex-shrink-0 animate-spin" />
-            <span className="font-medium">{toastMessage}</span>
+        <div className="fixed bottom-5 right-5 z-50 transition-all duration-200">
+          <div className="bg-white border border-slate-200 text-slate-800 px-4 py-3 rounded-xl shadow-lg shadow-slate-200/80 flex items-center space-x-2.5 text-sm">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="font-medium text-slate-700">{toastMessage}</span>
           </div>
         </div>
       )}
 
-      {/* Header */}
-      <Header
-        scaleStatus={scaleStatus}
+      {/* Left Navigation Sidebar */}
+      <Sidebar
         settings={settings}
+        scaleStatus={scaleStatus}
+        ordersCount={orders.length}
+        onTare={handleTare}
         onOpenSimulator={() => setIsSimulatorOpen(true)}
         onOpenLogs={() => setIsLogsOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenDocs={() => setIsDocsOpen(true)}
-        onTare={handleTare}
         cashierName={cashierName}
         onSwitchCashier={handleSwitchCashier}
         isUsingSupabase={systemInfo.isUsingSupabase}
+        activeNav={activeNav}
+        setActiveNav={setActiveNav}
+        isMobileOpen={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Live Weight Banner */}
-        <WeightDisplay
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen">
+        {/* Top Header Bar */}
+        <DashboardHeader
           scaleStatus={scaleStatus}
-          settings={settings}
           onTare={handleTare}
-          onManualOrder={handleManualOrder}
+          onNewOrder={handleManualOrder}
+          onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
         />
 
-        {/* Orders Table & Cashier Actions */}
-        <OrderList
-          orders={orders}
-          onEditOrder={(order) => {
-            setActiveOrderModal(order);
-            setIsOrderModalOpen(true);
-          }}
-          onUpdateStatus={handleUpdateStatus}
-          onOpenPaymentModal={(order) => {
-            setActivePaymentOrder(order);
-            setIsPaymentModalOpen(true);
-          }}
-          onResendWhatsApp={handleResendWhatsApp}
-          onDeleteOrder={handleDeleteOrder}
-        />
-      </main>
+        {/* Dashboard Grid Content */}
+        <main className="flex-1 p-3 sm:p-5 lg:p-6 xl:p-8 space-y-5 w-full">
+          {/* Main 2-Column Responsive Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start w-full">
+            {/* Left Column: Service Cards, Digital Scale & Order Table */}
+            <div className="lg:col-span-8 xl:col-span-9 space-y-5">
+              {/* Row 1: 3 Service Selector Cards */}
+              <ServiceCards
+                services={services}
+                selectedServiceId={selectedServiceId}
+                onSelectService={(s) => setSelectedServiceId(s.id)}
+              />
+
+              {/* Row 2: Digital Scale Real-Time Display Card */}
+              <WeightDisplay
+                scaleStatus={scaleStatus}
+                settings={settings}
+                selectedService={selectedService}
+                onTare={handleTare}
+                onManualOrder={handleManualOrder}
+              />
+
+              {/* Row 3: Orderan terbaru Table */}
+              <OrderList
+                orders={orders}
+                onEditOrder={(order) => {
+                  setActiveOrderModal(order);
+                  setIsOrderModalOpen(true);
+                }}
+                onUpdateStatus={handleUpdateStatus}
+                onOpenPaymentModal={(order) => {
+                  setActivePaymentOrder(order);
+                  setIsPaymentModalOpen(true);
+                }}
+                onResendWhatsApp={handleResendWhatsApp}
+                onDeleteOrder={handleDeleteOrder}
+              />
+            </div>
+
+            {/* Right Column: Pemasukan & Laporan Mingguan */}
+            <div className="lg:col-span-4 xl:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-5">
+              {/* Pemasukan Stat Card */}
+              <RevenueCard orders={orders} />
+
+              {/* Laporan Mingguan Stat Card */}
+              <WeeklyReportCard orders={orders} />
+            </div>
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="border-t border-slate-200 bg-white py-3 text-center text-xs text-slate-500 w-full">
+          <p className="w-full px-4">
+            Smart Laundry IoT Management System &bull; Integrasi ESP32 & Loadcell HX711 &bull; Fonnte WhatsApp Gateway &bull; Supabase Database
+          </p>
+        </footer>
+      </div>
 
       {/* Modals */}
       <AutoOrderModal
@@ -336,11 +420,6 @@ export default function App() {
         isOpen={isDocsOpen}
         onClose={() => setIsDocsOpen(false)}
       />
-
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-4 text-center text-xs text-slate-500">
-        <p>Smart Laundry IoT Management System &bull; ESP32 + Loadcell HX711 &bull; Fonnte WhatsApp API &bull; Supabase PostgreSQL</p>
-      </footer>
     </div>
   );
 }

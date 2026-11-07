@@ -17,6 +17,17 @@ export const DocsModal: React.FC<DocsModalProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<'sql' | 'firmware' | 'guide'>('sql');
   const [copied, setCopied] = useState<string | null>(null);
 
+  // Keyboard shortcut: Escape to close
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const copyCode = (code: string, id: string) => {
     navigator.clipboard.writeText(code);
     setCopied(id);
@@ -178,83 +189,89 @@ void loop() {
 }`;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
-              <FileCode2 className="w-4 h-4" />
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4"
+    >
+      <div className="relative w-full max-w-3xl bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden my-6">
+        <div className="bg-slate-50 px-5 sm:px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+              <FileCode2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Dokumentasi Teknis & Firmware</h3>
-              <p className="text-xs text-slate-400">Skema SQL Supabase, Firmware ESP32, dan Panduan Integrasi</p>
+              <h3 className="text-base font-bold text-slate-900">Dokumentasi Teknis & Firmware</h3>
+              <p className="text-xs text-slate-500">Skema SQL Supabase, Firmware ESP32, dan Panduan Integrasi</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition-colors"
+            aria-label="Tutup dokumentasi"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tab Selector */}
-        <div className="flex border-b border-slate-800 bg-slate-950/50 px-6">
+        <div className="flex border-b border-slate-200 bg-slate-50/50 px-3 sm:px-6 overflow-x-auto">
           <button
             onClick={() => setActiveTab('sql')}
-            className={`py-3 px-4 text-xs font-semibold border-b-2 flex items-center space-x-2 transition-colors ${
+            className={`py-3 px-3.5 min-h-[44px] text-xs font-semibold border-b-2 flex items-center space-x-2 transition-colors whitespace-nowrap ${
               activeTab === 'sql'
-                ? 'border-cyan-400 text-cyan-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-sky-600 text-sky-800'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Database className="w-4 h-4" />
+            <Database className="w-4 h-4 text-sky-600" />
             <span>Skema SQL Supabase</span>
           </button>
 
           <button
             onClick={() => setActiveTab('firmware')}
-            className={`py-3 px-4 text-xs font-semibold border-b-2 flex items-center space-x-2 transition-colors ${
+            className={`py-3 px-3.5 min-h-[44px] text-xs font-semibold border-b-2 flex items-center space-x-2 transition-colors whitespace-nowrap ${
               activeTab === 'firmware'
-                ? 'border-cyan-400 text-cyan-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-sky-600 text-sky-800'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Cpu className="w-4 h-4" />
+            <Cpu className="w-4 h-4 text-sky-600" />
             <span>Firmware ESP32 (Arduino)</span>
           </button>
 
           <button
             onClick={() => setActiveTab('guide')}
-            className={`py-3 px-4 text-xs font-semibold border-b-2 flex items-center space-x-2 transition-colors ${
+            className={`py-3 px-3.5 min-h-[44px] text-xs font-semibold border-b-2 flex items-center space-x-2 transition-colors whitespace-nowrap ${
               activeTab === 'guide'
-                ? 'border-cyan-400 text-cyan-300'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+                ? 'border-sky-600 text-sky-800'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <BookOpen className="w-4 h-4" />
+            <BookOpen className="w-4 h-4 text-sky-600" />
             <span>Alur Sistem & Fonnte</span>
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-[500px] overflow-y-auto">
+        <div className="p-4 sm:p-6 max-h-[500px] overflow-y-auto">
           {activeTab === 'sql' && (
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-300">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span className="text-xs text-slate-600">
                   Salin dan jalankan skrip ini pada menu <strong>SQL Editor</strong> di dashboard Supabase Anda.
                 </span>
                 <button
                   onClick={() => copyCode(sqlSchemaText, 'sql')}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-cyan-300 border border-slate-700 flex items-center space-x-1.5 transition-colors"
+                  className="min-h-[44px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-800 border border-slate-200 flex items-center justify-center space-x-1.5 transition-colors self-start sm:self-auto"
                 >
-                  {copied === 'sql' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied === 'sql' ? 'Tersalin!' : 'Salin SQL'}</span>
+                  {copied === 'sql' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-600" />}
+                  <span>{copied === 'sql' ? 'Tersalin' : 'Salin SQL'}</span>
                 </button>
               </div>
 
-              <pre className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs font-mono text-cyan-300 overflow-x-auto leading-relaxed">
+              <pre className="bg-slate-900 text-slate-100 p-4 rounded-xl border border-slate-800 text-xs font-mono overflow-x-auto leading-relaxed">
                 {sqlSchemaText}
               </pre>
             </div>
@@ -262,69 +279,69 @@ void loop() {
 
           {activeTab === 'firmware' && (
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-300">
-                  File tersimpan di <code className="text-cyan-400">/firmware/esp32_smart_laundry.ino</code>. Buka dengan Arduino IDE.
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span className="text-xs text-slate-600">
+                  File tersimpan di <code className="text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded border border-sky-200">/firmware/esp32_smart_laundry.ino</code>. Buka dengan Arduino IDE.
                 </span>
                 <button
                   onClick={() => copyCode(firmwareCode, 'firmware')}
-                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-cyan-300 border border-slate-700 flex items-center space-x-1.5 transition-colors"
+                  className="min-h-[44px] px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-800 border border-slate-200 flex items-center justify-center space-x-1.5 transition-colors self-start sm:self-auto"
                 >
-                  {copied === 'firmware' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied === 'firmware' ? 'Tersalin!' : 'Salin C++'}</span>
+                  {copied === 'firmware' ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-600" />}
+                  <span>{copied === 'firmware' ? 'Tersalin' : 'Salin C++'}</span>
                 </button>
               </div>
 
               {/* Pinout Table */}
-              <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800 text-xs">
-                <span className="font-semibold text-slate-300 block mb-2">Tabel Pinout ESP32 & Modul HX711:</span>
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+                <span className="font-semibold text-slate-800 block mb-2">Tabel Pinout ESP32 & Modul HX711:</span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
-                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-slate-400 block">DT (Data)</span>
-                    <span className="text-cyan-400 font-bold">GPIO 21</span>
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+                    <span className="text-slate-500 block">DT (Data)</span>
+                    <span className="text-slate-900 font-bold">GPIO 21</span>
                   </div>
-                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-slate-400 block">SCK (Clock)</span>
-                    <span className="text-cyan-400 font-bold">GPIO 22</span>
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+                    <span className="text-slate-500 block">SCK (Clock)</span>
+                    <span className="text-slate-900 font-bold">GPIO 22</span>
                   </div>
-                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-slate-400 block">Tombol Tare</span>
-                    <span className="text-cyan-400 font-bold">GPIO 4</span>
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+                    <span className="text-slate-500 block">Tombol Tare</span>
+                    <span className="text-slate-900 font-bold">GPIO 4</span>
                   </div>
-                  <div className="p-2 rounded bg-slate-900 border border-slate-800">
-                    <span className="text-slate-400 block">LED Status</span>
-                    <span className="text-cyan-400 font-bold">GPIO 2</span>
+                  <div className="p-2.5 rounded-lg bg-white border border-slate-200">
+                    <span className="text-slate-500 block">LED Status</span>
+                    <span className="text-slate-900 font-bold">GPIO 2</span>
                   </div>
                 </div>
               </div>
 
-              <pre className="bg-slate-950 p-4 rounded-xl border border-slate-800 text-xs font-mono text-cyan-300 overflow-x-auto leading-relaxed">
+              <pre className="bg-slate-900 text-slate-100 p-4 rounded-xl border border-slate-800 text-xs font-mono overflow-x-auto leading-relaxed">
                 {firmwareCode}
               </pre>
             </div>
           )}
 
           {activeTab === 'guide' && (
-            <div className="space-y-4 text-xs text-slate-300 leading-relaxed">
-              <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-2">
-                <h4 className="font-bold text-white text-sm">Alur Kerja Sistem</h4>
-                <ol className="list-decimal list-inside space-y-1.5 text-slate-300">
+            <div className="space-y-4 text-xs text-slate-600 leading-relaxed">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                <h4 className="font-bold text-slate-900 text-sm">Alur Kerja Sistem</h4>
+                <ol className="list-decimal list-inside space-y-1.5 text-slate-700">
                   <li><strong>Penimbangan:</strong> Cucian diletakkan di timbangan loadcell HX711. ESP32 membaca data dan mengirim paket UDP JSON setiap 300 ms ke backend port 4210.</li>
                   <li><strong>Deteksi Stabil:</strong> Backend mendeteksi jika selisih berat &lt; 0.02 kg selama 2 detik berturut-turut (berat minimal 0.10 kg).</li>
                   <li><strong>Auto-Draft & Pop-up:</strong> Backend otomatis membuat order draft di tabel orders dan memancarkan event <code>order:created</code> via Socket.io. Pop-up di dashboard kasir langsung terbuka otomatis.</li>
                   <li><strong>Konfirmasi & WA:</strong> Kasir melengkapi nama, nomor WA, opsi pengambilan (Self Pick-up / Delivery), lalu menekan Simpan. Notifikasi WA konfirmasi otomatis dikirim via Fonnte API.</li>
-                  <li><strong>Cucian Selesai:</strong> Kasir mengubah status ke "Selesai", WA pemberitahuan terkirim otomatis ke pelanggan.</li>
+                  <li><strong>Cucian Selesai:</strong> Kasir mengubah status ke "Selesai", notifikasi WhatsApp terkirim otomatis ke pelanggan.</li>
                   <li><strong>Pelunasan & Selesai:</strong> Kasir mencatat pembayaran (Tunai / Transfer / QRIS) dan menyerahkan cucian (status "Diambil").</li>
                 </ol>
               </div>
 
-              <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-800 space-y-2">
-                <h4 className="font-bold text-white text-sm">Integrasi Gateway Fonnte WhatsApp</h4>
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                <h4 className="font-bold text-slate-900 text-sm">Integrasi Gateway Fonnte WhatsApp</h4>
                 <p>
                   Untuk menghubungkan nomor WhatsApp riil:
                 </p>
-                <ol className="list-decimal list-inside space-y-1 text-slate-400">
-                  <li>Daftar akun di <a href="https://fonnte.com" target="_blank" rel="noreferrer" className="text-cyan-400 underline">Fonnte.com</a>.</li>
+                <ol className="list-decimal list-inside space-y-1.5 text-slate-600">
+                  <li>Daftar akun di <a href="https://fonnte.com" target="_blank" rel="noreferrer" className="text-sky-700 hover:underline font-medium">Fonnte.com</a>.</li>
                   <li>Tautkan perangkat WhatsApp Anda di dashboard Fonnte.</li>
                   <li>Salin API Token Anda dan tempelkan ke variabel <code>FONNTE_API_TOKEN</code> di file <code>.env</code>.</li>
                   <li>Sistem otomatis menormalisasi format nomor Indonesia (contoh: <code>0812...</code> diubah menjadi <code>62812...</code>) dan melakukan retry otomatis jika terjadi gangguan jaringan.</li>
@@ -334,10 +351,10 @@ void loop() {
           )}
         </div>
 
-        <div className="p-4 bg-slate-950/70 border-t border-slate-800 flex justify-end">
+        <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors"
+            className="min-h-[44px] px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors border border-slate-200"
           >
             Tutup Dokumentasi
           </button>
