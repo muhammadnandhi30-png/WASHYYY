@@ -130,7 +130,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <aside
         className={`fixed top-0 bottom-0 left-0 z-50 w-64 bg-white border-r border-slate-200 flex flex-col justify-between transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-        } lg:static lg:h-screen lg:shrink-0`}
+        } lg:sticky lg:top-0 lg:h-screen lg:shrink-0`}
       >
         <div className="flex flex-col flex-1 overflow-y-auto p-4 space-y-4">
           {/* Logo & Brand Header */}
