@@ -72,3 +72,4 @@ export function exportOrdersToExcel(orders: Order[], filenamePrefix = 'Laporan_P
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
